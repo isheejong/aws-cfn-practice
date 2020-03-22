@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  DevelopmentAccount:
+    Description: AWS AccountNumber for development account
+    Type: Number
+
+Resources:
+  SharedBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+
+  S3BucketRoleForApplicationDeployment:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: DeveloperUserS3AccessPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:CreateBucket
+              - s3:PutObject
+              - s3:GetObject
+              - s3:DeleteObject
+              - s3:GetBucketLocation
+              - s3:ListBucket
+            Resource: !GetAtt SharedBucket.Arn
+          - Effect: Allow
+            Action:
+              - s3:ListAllMyBuckets
+            Resource: "*"
+      Roles: 
+        - !Ref DeveloperAssessStstRole   # Role(another account) --> policy
+
+  DeveloperAssessStstRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: CrossAccountRoleForCrossAccoutUser
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Ref DevelopmentAccount
+            Action:
+              - sts:AssumeRole
+      Path: /
+Outputs:
+  DeveloperAssessStstRole:
+    Value: !GetAtt DeveloperAssessStstRole.Arn
+  SharedBucket:
+    Value: !GetAtt SharedBucket.Arn

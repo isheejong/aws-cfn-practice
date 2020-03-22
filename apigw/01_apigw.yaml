@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  HelloHeejong:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: HelloHeejong
+      Body:
+        swagger: '2.0'
+        info:
+          version: 0.0.1
+          title: test
+        basePath: /pete
+        schemes:
+          - http
+        definitions:
+          Empty:
+            type: object
+        paths:
+          /hello:
+            get:
+              description: "greeting hello"
+              consumes:
+              - "application/json"
+              produces:
+              - "application/json"
+              responses:
+                200:
+                  description: "successful operation"
+      Parameters:
+        endpointConfigurationTypes: REGIONAL
+        
+  ApiGatewayRootMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      AuthorizationType: "NONE"
+      HttpMethod: "GET"
+      Integration:
+        IntegrationHttpMethod: "GET"
+        Type: "AWS_PROXY"
+        Uri: !Sub
+          - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations"
+          - lambdaArn: !GetAtt "lambdaFunction.Arn"
+      ResourceId: !GetAtt "apiGateway.RootResourceId"
+      RestApiId: !Ref "apiGateway"
+
+  HelloHeejongDep:
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      RestApiId: !Ref HelloHeejong
+      StageId : !Ref DevStage
+  DevStage:
+    Type: 'AWS::ApiGateway::Stage'
+    Properties:
+      RestApiId: !Ref HelloHeejong
