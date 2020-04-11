@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+    ApprovalTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        Subscription:
+        - Endpoint: "isheejong@gmail.com"
+          Protocol: email
+ 
+    LandingZoenCodeCommit:
+      Type: AWS::CodeCommit::Repository
+      Properties:
+        RepositoryName: kb-landingzone-configuration-repository
+        RepositoryDescription: a description
+        Triggers:
+        - Name: MasterTrigger
+          CustomData: Project ID 12345 
+          Branches:                    
+          - Master
+          DestinationArn: !Ref ApprovalTopic
+          Events:
+          - all
