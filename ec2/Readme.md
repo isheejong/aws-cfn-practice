@@ -1,0 +1,1 @@
+aws cloudformation create-stack --stack-name ec2-stack --template-body file:///home/ubuntu/environment/awskr-cfn-practice/ec2/ec2instance.yam
