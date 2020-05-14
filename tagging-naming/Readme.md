@@ -1,0 +1,1 @@
+aws cloudformation create-stack --stack-name ec2-stack --template-body dynamicnaming.yml
