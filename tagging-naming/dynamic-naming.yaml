@@ -1,5 +1,28 @@
 AWSTemplateFormatVersion: 2010-09-09
 
+Parameters:
+  ManagedResourcePrefix:
+    Default: 'heejong'
+    Type: 'String'
+    Description: 'Prefix for the managed resources'
+  
+  Env:
+    Default: 'dev'
+    Type: 'String'
+    Description: 'List of Availability Zones to use for the subnets in the VPC.'
+
+  AvailabilityZones:
+    Default: 'ap-northeast-2c,ap-northeast-2a'
+    Type: CommaDelimitedList
+    Description: 'List of Availability Zones to use for the subnets in the VPC.'
+
+Mappings:
+  AvailableZoneMap:
+    ap-northeast-2a:
+      Alias: 'a'
+    ap-northeast-2c:
+      Alias: 'c'
+
 Resources:
   MyVPC:
     Type: AWS::EC2::VPC
@@ -8,5 +31,20 @@ Resources:
       EnableDnsSupport: 'false'
       EnableDnsHostnames: 'false'
       InstanceTenancy: dedicated
+
+  MySubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: !Select ['0', !Ref 'AvailabilityZones']
+      Tags:
+      - Key: Name
+        Value: 
+          !Sub 
+          - sn-${ManagedResourcePrefix}-${Env}-prd-pri-${AvailabilityZone}
+          - AvailabilityZone : !FindInMap [ AvailableZoneMap , !Select ['0', !Ref 'AvailabilityZones' ],  'Alias' ]
+
 
 
