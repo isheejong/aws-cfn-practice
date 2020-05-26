@@ -6,22 +6,37 @@ Parameters:
     Type: 'String'
     Description: 'Prefix for the managed resources'
   
+  NumberOfAZs:
+    AllowedValues:
+      - '2'
+      - '3'
+      - '4'
+    Default: '2'
+    Description: Number of Availability Zones to use in the VPC. This must match your selections in the list of Availability Zones parameter.
+    Type: String
+
   Env:
     Default: 'dev'
     Type: 'String'
     Description: 'List of Availability Zones to use for the subnets in the VPC.'
 
+    
   AvailabilityZones:
     Default: 'ap-northeast-2c,ap-northeast-2a'
     Type: CommaDelimitedList
     Description: 'List of Availability Zones to use for the subnets in the VPC.'
 
 Mappings:
-  AvailableZoneMap:
-    ap-northeast-2a:
-      Alias: 'a'
-    ap-northeast-2c:
-      Alias: 'c'
+  RegionMap:
+    ap-northeast-2:
+      AZa: 'a'
+      AZb: 'b'
+      AZb: 'c'
+    ap-northeast-1:
+      AZa: 'a'
+      AZb: 'b'
+      AZb: 'c'
+
 
 Resources:
   MyVPC:
@@ -38,13 +53,10 @@ Resources:
       VpcId:
         Ref: MyVPC
       CidrBlock: 10.0.0.0/24
-      AvailabilityZone: !Select ['0', !Ref 'AvailabilityZones']
+      AvailabilityZone: !Join ['', [!Ref 'AWS::Region', 'b']]
       Tags:
       - Key: Name
         Value: 
           !Sub 
-          - sn-${ManagedResourcePrefix}-${Env}-prd-pri-${AvailabilityZone}
-          - AvailabilityZone : !FindInMap [ AvailableZoneMap , !Select ['0', !Ref 'AvailabilityZones' ],  'Alias' ]
-
-
-
+          - sn-${ManagedResourcePrefix}-${Env}-prd-pri-${AZs}
+          - { AZs : 'b' }
