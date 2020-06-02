@@ -1,0 +1,217 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This template creates a VPC which have 2 of private subnet in 2 AZ in ap-northeast-2 region for KB
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - VPCCIDR
+          - PrivateSubnet1ACIDR
+          - PrivateSubnet2ACIDR
+      - Label:
+          default: KB Project environment
+        Parameters:
+          - ProjectName
+          - Stage
+          - CodeName
+    ParameterLabels:
+      PrivateSubnet1ACIDR:
+        default: Private subnet 1A CIDR
+      PrivateSubnet2ACIDR:
+        default: Private subnet 2A CIDR
+      VPCCIDR:
+        default: VPC CIDR
+      LogsRetentionInDays:
+        default: Flow Logs Retention In Days
+
+Parameters:
+  ProjectName:
+    Description: Specifiy the name of project that is applied this resource
+    Type: String
+    Default: 'pcm'
+  Stage:
+    Description: Step of project name
+    Type: String
+    Default: 'dev'
+    AllowedValues:
+      - 'dev'
+      - 'stg'
+      - 'qa'
+      - 'prd'
+  CodeName:
+    Description: Code name of work
+    Type: String
+    Default: 'pao'
+    AllowedValues:
+      - 'pao'
+      - 'pai'
+      - 'pea'
+  PrivateSubnet1ACIDR:
+    Default: 10.0.0.0/19
+    Description: CIDR block for private subnet 1A located in Availability Zone 1
+    Type: String
+  PrivateSubnet2ACIDR:
+    Default: 10.0.32.0/19
+    Description: CIDR block for private subnet 2A located in Availability Zone 2
+    Type: String
+  VPCCIDR:
+    Default: 10.0.0.0/16
+    Description: CIDR block for the VPC
+    Type: String
+  LogsRetentionInDays:
+    Description: 'Specifies the number of days you want to retain log events in the specified log group.'
+    Type: Number
+    Default: 90
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    DeletionPolicy: Retain
+    Properties:
+      CidrBlock: !Ref 'VPCCIDR'
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: !Sub vpc-${ProjectName}-${Stage}-${CodeName}
+
+  PrivateSubnet1A:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Retain
+    Properties:
+      VpcId: !Ref 'VPC'
+      CidrBlock: !Ref 'PrivateSubnet1ACIDR'
+      AvailabilityZone: ap-northeast-2a
+      Tags:
+        - Key: Name
+          Value: !Sub sn-${ProjectName}-${Stage}-${CodeName}-pri-a
+        - Key: Network
+          Value: Private
+
+  PrivateSubnet2A:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Retain
+    Properties:
+      VpcId: !Ref 'VPC'
+      CidrBlock: !Ref 'PrivateSubnet2ACIDR'
+      AvailabilityZone: ap-northeast-2c
+      Tags:
+        - Key: Name
+          Value: !Sub sn-${ProjectName}-${Stage}-${CodeName}-pri-c
+        - Key: Network
+          Value: Private
+
+  PrivateSubnet1ARouteTable:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Retain
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Sub rt-${ProjectName}-${Stage}-${CodeName}-pri
+        - Key: Network
+          Value: Private
+
+  PrivateSubnet2ARouteTable:
+    Type: AWS::EC2::RouteTable
+    DeletionPolicy: Retain
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Sub rt-${ProjectName}-${Stage}-${CodeName}-pri
+        - Key: Network
+          Value: Private
+
+  VPCFlowLogsLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    Properties:
+      RetentionInDays: !Ref LogsRetentionInDays
+
+  VPCFlowLogsRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "Allow Resource * for CloudWatch Logs API since the resources are customer defined."
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - vpc-flow-logs.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: LogRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                Resource: '*'
+  VPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    DeletionPolicy: Retain
+    Properties:
+        DeliverLogsPermissionArn: !GetAtt 'VPCFlowLogsRole.Arn'
+        LogGroupName: !Ref 'VPCFlowLogsLogGroup'
+        ResourceId: !Ref 'VPC'
+        ResourceType: VPC
+        TrafficType: ALL
+
+Outputs:
+  PrivateSubnet1ACIDR:
+    Description: Private subnet 1A CIDR in ap-northeast-2a
+    Value: !Ref 'PrivateSubnet1ACIDR'
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1ACIDR'
+  PrivateSubnet1AID:
+    Description: Private subnet 1A ID in ap-northeast-2a
+    Value: !Ref 'PrivateSubnet1A'
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1AID'
+  PrivateSubnet2ACIDR:
+    Description: Private subnet 2A CIDR in Availability Zone 2
+    Value: !Ref 'PrivateSubnet2ACIDR'
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet2ACIDR'
+  PrivateSubnet2AID:
+    Description: Private subnet 2A ID in Availability Zone 2
+    Value: !Ref 'PrivateSubnet2A'
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet2AID'
+  PrivateSubnet1ARouteTable:
+    Value: !Ref 'PrivateSubnet1ARouteTable'
+    Description: Private subnet 1A route table
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1ARouteTable'
+  PrivateSubnet2ARouteTable:
+    Value: !Ref 'PrivateSubnet2ARouteTable'
+    Description: Private subnet 2A route table
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet2ARouteTable'
+  VPCCIDR:
+    Value: !Ref 'VPCCIDR'
+    Description: VPC CIDR
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCCIDR'
+  VPCID:
+    Value: !Ref 'VPC'
+    Description: VPC ID
+  VPCRegion:
+    Value: !Ref AWS::Region
+    Description: VPC Region

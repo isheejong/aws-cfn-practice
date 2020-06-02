@@ -1,0 +1,284 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This template creates a VPC which have 4 of private subnet in 2 AZ in ap-northeast-2 region for KB
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Availability Zone Configuration
+        Parameters:
+          - AvailabilityZones1
+          - AvailabilityZones2
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - VPCCIDR
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
+          - PrivateSubnet3CIDR
+          - PrivateSubnet4CIDR
+          - LogsRetentionInDays
+      - Label:
+          default: KB Project environment
+        Parameters:
+          - ProjectName
+          - Stage
+          - CodeName
+
+    ParameterLabels:
+      AvailabilityZones1:
+        default: Availability Zones (1)
+      AvailabilityZones2:
+        default: Availability Zones (2)
+      PrivateSubnet1CIDR:
+        default: Private Subnet 1A CIDR in Availability Zones (1)
+      PrivateSubnet2CIDR:
+        default: Private Subnet 1B CIDR in Availability Zones (2)
+      PrivateSubnet1CIDR:
+        default: Private Subnet 2A CIDR in Availability Zones (1)
+      PrivateSubnet2CIDR:
+        default: Private Subnet 2B CIDR in Availability Zones (2)
+      VPCCIDR:
+        default: VPC CIDR
+      LogsRetentionInDays:
+        default: Flow Logs Retention In Days
+
+Parameters:
+  ProjectName:
+    Description: Specifiy the name of project that is applied this resource
+    Type: String
+    Default: 'pcm'
+  Stage:
+    Description: Step of project name
+    Type: String
+    Default: 'dev'
+    AllowedValues:
+      - 'dev'
+      - 'stg'
+      - 'qa'
+      - 'prd'
+  CodeName:
+    Description: Code name of work
+    Type: String
+    Default: 'pao'
+    AllowedValues:
+      - 'pao'
+      - 'pai'
+      - 'pea'
+    AvailabilityZones1:
+      Description: 'List of Availability Zones to use for the subnets in the VPC.'
+      Type: String
+      Default: 'a'
+      AllowedValues:
+        - 'a'
+        - 'c'
+    AvailabilityZones2:
+      Description: 'List of Availability Zones to use for the subnets in the VPC.'
+      Type: String
+      Default: 'a'
+      AllowedValues:
+        - 'a'
+        - 'c'
+  PrivateSubnet1CIDR:
+    Default: 10.0.1.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    Description: CIDR block for private subnet 1A located in Availability Zones (1)
+    Type: String
+  PrivateSubnet2CIDR:
+    Default: 10.0.2.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    Description: CIDR block for private subnet 1B located in Availability Zones (2)
+    Type: String
+  PrivateSubnet3CIDR:
+    Default: 10.0.4.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    Description: CIDR block for private subnet 2A located in Availability Zones (1)
+    Type: String
+  PrivateSubnet4CIDR:
+    Default: 10.0.5.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    Description: CIDR block for private subnet 2B located in Availability Zones (2)
+    Type: String
+  VPCCIDR:
+    Default: 10.0.0.0/16
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    Description: CIDR block for the VPC
+    Type: String
+  LogsRetentionInDays:
+    Description: 'Specifies the number of days you want to retain log events in the specified log group.'
+    Type: Number
+    Default: 90
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
+Resources:
+  DHCPOptions:
+    Type: AWS::EC2::DHCPOptions
+    DeletionPolicy: Retain
+    Properties:
+      DomainName: !Join ['', [!Ref 'AWS::Region',.compute.internal]]
+      DomainNameServers:
+        - AmazonProvidedDNS
+      Tags:
+        - Key: Name
+          Value: !Sub dhcp-${ProjectName}-${Stage}-${CodeName}
+
+  VPC:
+    Type: AWS::EC2::VPC
+    DeletionPolicy: Retain
+    Properties:
+      CidrBlock: !Ref 'VPCCIDR'
+      Tags:
+        - Key: Name
+          Value: !Sub vpc-${ProjectName}-${Stage}-${CodeName}
+
+  PrivateSubnet1:
+    DependsOn: VPC    
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 'VPC'
+      CidrBlock: !Ref 'PrivateSubnet1ACIDR'
+      AvailabilityZone: !Sub
+        - ap-northeast-2${AZ}
+        - { AZ : !Ref 'AvailabilityZones1' }
+      Tags:
+        - Key: Name
+          Value: !Sub sn-${ProjectName}-${Stage}-${CodeName}-pri-a
+        - Key: Network
+          Value: Private
+
+  PrivateSubnet2:
+    DependsOn: VPC
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref 'VPC'
+      CidrBlock: !Ref 'PrivateSubnet1BCIDR'
+      AvailabilityZone: !Sub
+        - ap-northeast-2${AZ}
+        - { AZ : !Ref 'AvailabilityZones2' }
+      Tags:
+        - Key: Name
+          Value: !Sub sn-${ProjectName}-${Stage}-${CodeName}-pri-c
+        - Key: Network
+          Value: Private
+
+  PrivateSubnet3:
+    DependsOn: VPC
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Retain
+    Properties:
+      VpcId: !Ref 'VPC'
+      CidrBlock: !Ref 'PrivateSubnet3CIDR'
+      AvailabilityZone: !Sub
+        - ap-northeast-2${AZ}
+        - { AZ : !Ref 'AvailabilityZones2' }
+      Tags:
+        - Key: Name
+          Value: !Sub sn-${ProjectName}-${Stage}-${CodeName}-pri-a
+        - Key: Network
+          Value: Private
+
+  PrivateSubnet4:
+    DependsOn: VPC
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Retain
+    Properties:
+      VpcId: !Ref 'VPC'
+      CidrBlock: !Ref 'PrivateSubnet4CIDR'
+     AvailabilityZone: !Sub
+        - ap-northeast-2${AZ}
+        - { AZ : !Ref 'AvailabilityZones2' }
+      Tags:
+        - Key: Name
+          Value: !Sub sn-${ProjectName}-${Stage}-${CodeName}-pri-c
+        - Key: Network
+          Value: Private
+
+  VPCFlowLogsLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    Properties:
+      RetentionInDays: !Ref LogsRetentionInDays
+
+  VPCFlowLogsRole:
+    DeletionPolicy: Retain
+    Type: AWS::IAM::Role
+    DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "Allow Resource * for CloudWatch Logs API since the resources are customer defined."
+
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - vpc-flow-logs.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: LogRolePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                Resource: '*'
+  VPCFlowLog:
+    Type: AWS::EC2::FlowLog
+    DeletionPolicy: Retain
+    Properties:
+        DeliverLogsPermissionArn: !GetAtt 'VPCFlowLogsRole.Arn'
+        LogGroupName: !Ref 'VPCFlowLogsLogGroup'
+        ResourceId: !Ref 'VPC'
+        ResourceType: VPC
+        TrafficType: ALL
+
+Outputs:
+  PrivateSubnet1CIDR:
+    Description: Private subnet 1 CIDR in Availability Zone 1
+    Value: !Ref 'PrivateSubnet1ACIDR'
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1ACIDR'
+  PrivateSubnet1ID:
+    Description: Private subnet 1 ID in Availability Zone 1
+    Value: !Ref 'PrivateSubnet1'
+  PrivateSubnet2CIDR:
+    Description: Private subnet 2 CIDR in Availability Zone 2
+    Value: !Ref 'PrivateSubnet2CIDR'
+  PrivateSubnet2ID:
+    Description: Private subnet 2 ID in Availability Zone 2
+    Value: !Ref 'PrivateSubnet2'
+  PrivateSubnet3CIDR:
+    Description: Private subnet 3 CIDR in Availability Zone 1
+    Value: !Ref 'PrivateSubnet3CIDR'
+  PrivateSubnet3ID:
+    Description: Private subnet 3 ID in Availability Zone 1
+    Value: !Ref 'PrivateSubnet3'
+  PrivateSubnet4CIDR:
+    Description: Private subnet 4 CIDR in Availability Zone 2
+    Value: !Ref 'PrivateSubnet4CIDR'
+  PrivateSubnet4ID:
+    Description: Private subnet 4 ID in Availability Zone 2
+    Value: !Ref 'PrivateSubnet4'
+  VPCCIDR:
+    Value: !Ref 'VPCCIDR'
+    Description: VPC CIDR
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCCIDR'
+  VPCID:
+    Value: !Ref 'VPC'
+    Description: VPC ID
+    Export:
+      Name: DefaultVPCId
+  VPCRegion:
+    Value: !Ref AWS::Region
+    Description: VPC Region
