@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: This template creates a VPC which has 1 public subnet with IGW in an AZ of ap-northeast-2 region for KB
+Description: This template creates a VPC which has 1 public subnet with IGW in an AZ of ap-northeast-2 region
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
