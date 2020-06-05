@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: This templates create a VPC which has 4 private subnet in an AZ of ap-northeast-2 region for KB
+Description: This templates create a VPC which has 4 private subnet in an AZ of ap-northeast-2 region.
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
