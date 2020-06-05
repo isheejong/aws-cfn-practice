@@ -13,6 +13,8 @@ Metadata:
           default: Network Configuration
         Parameters:
           - VPCCIDR
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
           - PrivateSubnet1CIDR
           - PrivateSubnet2CIDR
           - PrivateSubnet3CIDR
@@ -30,14 +32,22 @@ Metadata:
         default: Availability Zones (1)
       AvailabilityZones2:
         default: Availability Zones (2)
+      PublicSubnet1CIDR:
+        default: Public Subnet 1 CIDR in Availability Zones (1)
+      PublicSubnet2CIDR:
+        default: Public Subnet 2 CIDR in Availability Zones (2)
+      PrivateSubnet3CIDR:
+        default: Private Subnet 3 CIDR in Availability Zones (1)
+      PrivateSubnet4CIDR:
+        default: Private Subnet 4 CIDR in Availability Zones (2)
       PrivateSubnet1CIDR:
-        default: Private Subnet 1A CIDR in Availability Zones (1)
+        default: Private Subnet 1 CIDR in Availability Zones (1)
       PrivateSubnet2CIDR:
-        default: Private Subnet 1B CIDR in Availability Zones (2)
-      PrivateSubnet1CIDR:
-        default: Private Subnet 2A CIDR in Availability Zones (1)
-      PrivateSubnet2CIDR:
-        default: Private Subnet 2B CIDR in Availability Zones (2)
+        default: Private Subnet 2 CIDR in Availability Zones (2)
+      PrivateSubnet3CIDR:
+        default: Private Subnet 3 CIDR in Availability Zones (1)
+      PrivateSubnet4CIDR:
+        default: Private Subnet 4 CIDR in Availability Zones (2)
       VPCCIDR:
         default: VPC CIDR
       LogsRetentionInDays:
@@ -65,53 +75,52 @@ Parameters:
       - 'pao'
       - 'pai'
       - 'pea'
-    AvailabilityZones1:
-      Description: 'List of Availability Zones to use for the subnets in the VPC.'
-      Type: String
-      Default: 'ap-northeast-2a'
-      AllowedValues:
-        - 'ap-northeast-2a'
-        - 'ap-northeast-2c'
-    AvailabilityZones2:
-      Description: 'List of Availability Zones to use for the subnets in the VPC.'
-      Type: String
-      Default: 'ap-northeast-2a'
-      AllowedValues:
-        - 'ap-northeast-2a'
-        - 'ap-northeast-2c'
-
+  AvailabilityZones1:
+    Description: 'List of Availability Zones to use for the subnets in the VPC.'
+    Type: String
+    Default: 'a'
+    AllowedValues:
+      - 'a'
+      - 'c'
+  AvailabilityZones2:
+    Description: 'List of Availability Zones to use for the subnets in the VPC.'
+    Type: String
+    Default: 'c'
+    AllowedValues:
+      - 'a'
+      - 'c'
   PublicSubnet1CIDR:
-    Default: 10.0.128.0/20
+    Default: 10.0.1.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     Description: CIDR block for the public DMZ subnet 1 located in Availability Zone 1
     Type: String
   
   PublicSubnet2CIDR:
-    Default: 10.0.128.0/20
+    Default: 10.0.2.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     Description: CIDR block for the public DMZ subnet 1 located in Availability Zone 1
     Type: String
 
   PrivateSubnet1CIDR:
-    Default: 10.0.1.0/24
+    Default: 10.0.3.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     Description: CIDR block for private subnet 1A located in Availability Zones (1)
     Type: String
 
   PrivateSubnet2CIDR:
-    Default: 10.0.2.0/24
+    Default: 10.0.4.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     Description: CIDR block for private subnet 1B located in Availability Zones (2)
     Type: String
 
   PrivateSubnet3CIDR:
-    Default: 10.0.4.0/24
+    Default: 10.0.5.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     Description: CIDR block for private subnet 2A located in Availability Zones (1)
     Type: String
 
   PrivateSubnet4CIDR:
-    Default: 10.0.5.0/24
+    Default: 10.0.6.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     Description: CIDR block for private subnet 2B located in Availability Zones (2)
     Type: String
@@ -167,9 +176,7 @@ Resources:
       VpcId: !Ref 'VPC'
       InternetGatewayId: !Ref 'InternetGateway'
 
-  #
   # Public Subnet Configurations
-  #
   
   PublicSubnet1:
     Type: AWS::EC2::Subnet
@@ -178,40 +185,14 @@ Resources:
       CidrBlock: !Ref 'PublicSubnet1CIDR'
       AvailabilityZone: !Sub
         - ap-northeast-2${AZ}
-        - { AZ : !Ref 'AvailabilityZones' }
+        - { AZ : !Ref 'AvailabilityZones1' }
       Tags:
         - Key: Name
           Value: !Sub 
             - sn-${ProjectName}-${Stage}-${CodeName}-pub-${AZs}
-            - { AZs : !Ref 'AvailabilityZones' }
+            - { AZs : !Ref 'AvailabilityZones1' }
         - Key: Network
           Value: Public
-
-  PublicSubnet1RouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref 'VPC'
-      Tags:
-        - Key: Name
-          Value: !Sub rt-${ProjectName}-${Stage}-${CodeName}-pub
-        - Key: Network
-          Value: Public
-
-  PublicSubnet1Route:
-    Type: AWS::EC2::Route
-    DependsOn:
-      - InternetGateway
-      - VPCGatewayAttachment
-    Properties:
-      RouteTableId: !Ref 'PublicSubnet1RouteTable'
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref 'InternetGateway'
-
-  PublicSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref 'PublicSubnet1'
-      RouteTableId: !Ref 'PublicSubnet1RouteTable'
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -220,16 +201,16 @@ Resources:
       CidrBlock: !Ref 'PublicSubnet2CIDR'
       AvailabilityZone: !Sub
         - ap-northeast-2${AZ}
-        - { AZ : !Ref 'AvailabilityZones' }
+        - { AZ : !Ref 'AvailabilityZones2' }
       Tags:
         - Key: Name
           Value: !Sub 
             - sn-${ProjectName}-${Stage}-${CodeName}-pub-${AZs}
-            - { AZs : !Ref 'AvailabilityZones' }
+            - { AZs : !Ref 'AvailabilityZones2' }
         - Key: Network
           Value: Public
 
-  PublicSubnet2RouteTable:
+  PublicSubnetRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref 'VPC'
@@ -239,22 +220,29 @@ Resources:
         - Key: Network
           Value: Public
 
-  PublicSubnet2Route:
+  PublicSubnetRoute:
     Type: AWS::EC2::Route
     DependsOn:
       - InternetGateway
       - VPCGatewayAttachment
     Properties:
-      RouteTableId: !Ref 'PublicSubnet2RouteTable'
+      RouteTableId: !Ref 'PublicSubnetRouteTable'
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref 'InternetGateway'
 
-  PublicSubnet2RouteTableAssociation:
+  PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref 'PublicSubnet1'
-      RouteTableId: !Ref 'PublicSubnet2RouteTable'
- 
+      RouteTableId: !Ref 'PublicSubnetRouteTable'
+  
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'PublicSubnet2'
+      RouteTableId: !Ref 'PublicSubnetRouteTable' 
+
+
   #
   # Private Subnet Configurations
   #
@@ -264,13 +252,15 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref 'VPC'
-      CidrBlock: !Ref 'PrivateSubnet1ACIDR'
+      CidrBlock: !Ref 'PrivateSubnet1CIDR'
       AvailabilityZone: !Sub
         - ap-northeast-2${AZ}
         - { AZ : !Ref 'AvailabilityZones1' }
       Tags:
         - Key: Name
-          Value: !Sub sn-${ProjectName}-${Stage}-${CodeName}-pri-a
+          Value: !Sub 
+            - sn-${ProjectName}-${Stage}-${CodeName}-pub-${AZs}
+            - { AZs : !Ref 'AvailabilityZones1' }
         - Key: Network
           Value: Private
 
@@ -279,13 +269,15 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref 'VPC'
-      CidrBlock: !Ref 'PrivateSubnet1BCIDR'
+      CidrBlock: !Ref 'PrivateSubnet2CIDR'
       AvailabilityZone: !Sub
         - ap-northeast-2${AZ}
         - { AZ : !Ref 'AvailabilityZones2' }
       Tags:
         - Key: Name
-          Value: !Sub sn-${ProjectName}-${Stage}-${CodeName}-pri-c
+          Value: !Sub 
+            - sn-${ProjectName}-${Stage}-${CodeName}-pub-${AZs}
+            - { AZs : !Ref 'AvailabilityZones2' }
         - Key: Network
           Value: Private
 
@@ -298,10 +290,12 @@ Resources:
       CidrBlock: !Ref 'PrivateSubnet3CIDR'
       AvailabilityZone: !Sub
         - ap-northeast-2${AZ}
-        - { AZ : !Ref 'AvailabilityZones2' }
+        - { AZ : !Ref 'AvailabilityZones1' }
       Tags:
         - Key: Name
-          Value: !Sub sn-${ProjectName}-${Stage}-${CodeName}-pri-a
+          Value: !Sub 
+            - sn-${ProjectName}-${Stage}-${CodeName}-pub-${AZs}
+            - { AZs : !Ref 'AvailabilityZones1' }
         - Key: Network
           Value: Private
 
@@ -312,12 +306,14 @@ Resources:
     Properties:
       VpcId: !Ref 'VPC'
       CidrBlock: !Ref 'PrivateSubnet4CIDR'
-     AvailabilityZone: !Sub
+      AvailabilityZone: !Sub
         - ap-northeast-2${AZ}
         - { AZ : !Ref 'AvailabilityZones2' }
       Tags:
         - Key: Name
-          Value: !Sub sn-${ProjectName}-${Stage}-${CodeName}-pri-c
+          Value: !Sub 
+            - sn-${ProjectName}-${Stage}-${CodeName}-pub-${AZs}
+            - { AZs : !Ref 'AvailabilityZones2' }
         - Key: Network
           Value: Private
 
@@ -372,32 +368,42 @@ Resources:
         TrafficType: ALL
 
 Outputs:
-  PrivateSubnet1CIDR:
+  PublicSubnet1CIDR:
     Description: Private subnet 1 CIDR in Availability Zone 1
-    Value: !Ref 'PrivateSubnet1ACIDR'
-    Export:
-      Name: !Sub '${AWS::StackName}-PrivateSubnet1ACIDR'
-  PrivateSubnet1ID:
+    Value: !Ref 'PublicSubnet1CIDR'
+  PublicSubnet1ID:
     Description: Private subnet 1 ID in Availability Zone 1
-    Value: !Ref 'PrivateSubnet1'
-  PrivateSubnet2CIDR:
+    Value: !Ref 'PublicSubnet1'
+  PublicSubnet2CIDR:
     Description: Private subnet 2 CIDR in Availability Zone 2
-    Value: !Ref 'PrivateSubnet2CIDR'
-  PrivateSubnet2ID:
+    Value: !Ref 'PublicSubnet2CIDR'
+  PublicSubnet2ID:
     Description: Private subnet 2 ID in Availability Zone 2
-    Value: !Ref 'PrivateSubnet2'
-  PrivateSubnet3CIDR:
+    Value: !Ref 'PublicSubnet2'
+  PrivateSubnet1CIDR:
     Description: Private subnet 3 CIDR in Availability Zone 1
     Value: !Ref 'PrivateSubnet3CIDR'
-  PrivateSubnet3ID:
+  PrivateSubnet1ID:
     Description: Private subnet 3 ID in Availability Zone 1
+    Value: !Ref 'PrivateSubnet3'
+  PrivateSubnet2CIDR:
+    Description: Private subnet 4 CIDR in Availability Zone 2
+    Value: !Ref 'PrivateSubnet2CIDR'
+  PrivateSubnet2ID:
+    Description: Private subnet 4 ID in Availability Zone 2
+    Value: !Ref 'PrivateSubnet2'
+  PrivateSubnet3CIDR:
+    Description: Private subnet 4 CIDR in Availability Zone 2
+    Value: !Ref 'PrivateSubnet3CIDR'
+  PrivateSubnet3ID:
+    Description: Private subnet 4 ID in Availability Zone 2
     Value: !Ref 'PrivateSubnet3'
   PrivateSubnet4CIDR:
     Description: Private subnet 4 CIDR in Availability Zone 2
-    Value: !Ref 'PrivateSubnet4CIDR'
+    Value: !Ref 'PrivateSubnet3CIDR'
   PrivateSubnet4ID:
     Description: Private subnet 4 ID in Availability Zone 2
-    Value: !Ref 'PrivateSubnet4'
+    Value: !Ref 'PrivateSubnet3'
   VPCCIDR:
     Value: !Ref 'VPCCIDR'
     Description: VPC CIDR
