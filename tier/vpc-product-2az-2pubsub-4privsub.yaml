@@ -5,6 +5,12 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
+          default: EC2 Configurations
+        Parameters:
+          - OperatingSystem
+          - InstanceType
+
+      - Label:
           default: Availability Zone Configuration
         Parameters:
           - AvailabilityZones1
@@ -52,6 +58,31 @@ Metadata:
         default: VPC CIDR
       LogsRetentionInDays:
         default: Flow Logs Retention In Days
+
+Mappings:
+  AWSInstanceType2Arch:
+    m1.small:
+      Arch: PV64
+    m1.medium:
+      Arch: PV64
+    m1.large:
+      Arch: PV64
+    m1.xlarge:
+      Arch: PV64
+    m2.xlarge:
+      Arch: PV64
+    m2.2xlarge:
+      Arch: PV64
+    m2.4xlarge:
+      Arch: PV64
+    m3.medium:
+      Arch: HVM64
+    m3.large:
+      Arch: HVM64
+    m3.xlarge:
+      Arch: HVM64
+    m3.2xlarge:
+      Arch: HVM64
 
 Parameters:
   ProjectName:
@@ -136,6 +167,34 @@ Parameters:
     Type: Number
     Default: 90
     AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: m1.small
+    AllowedValues:
+      - m1.small
+      - m1.medium
+      - m1.large
+      - m1.xlarge
+      - m2.xlarge
+      - m2.2xlarge
+      - m2.4xlarge
+      - m3.medium
+      - m3.large
+      - m3.xlarge
+      - m3.2xlarge
+    ConstraintDescription: Must be a valid EC2 instance type.
+
+  OperatingSystem:
+    Description: Code name of work
+    Type: String
+    Default: 'RedHat Linux'
+    AllowedValues:
+      - 'RedHat Linux'
+      - 'Windows2010'
+      - 'Amazon Linux'
+      - 'Ubuntu'
 
 Resources:
   DHCPOptions:
@@ -317,6 +376,40 @@ Resources:
         - Key: Network
           Value: Private
 
+  PrivateSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: !Sub rt-${ProjectName}-${Stage}-${CodeName}-pri
+        - Key: Network
+          Value: Public
+  
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'PrivateSubnet1'
+      RouteTableId: !Ref 'PrivateSubnetRouteTable' 
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'PrivateSubnet2'
+      RouteTableId: !Ref 'PrivateSubnetRouteTable' 
+
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'PrivateSubnet3'
+      RouteTableId: !Ref 'PrivateSubnetRouteTable' 
+
+  PrivateSubnet4RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'PrivateSubnet4'
+      RouteTableId: !Ref 'PrivateSubnetRouteTable' 
+
   VPCFlowLogsLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
@@ -366,6 +459,189 @@ Resources:
         ResourceId: !Ref 'VPC'
         ResourceType: VPC
         TrafficType: ALL
+
+  AMIInfoFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs12.x
+      Role: !GetAtt 
+        - LambdaExecutionRole
+        - Arn
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          /**
+          * A sample Lambda function that looks up the latest AMI ID for a given region and architecture.
+          **/
+
+          // Map instance architectures to an AMI name pattern
+          var archToAMINamePattern = {
+              "PV64": "amzn-ami-pv*x86_64-ebs",
+              "HVM64": "amzn-ami-hvm*x86_64-gp2",
+              "HVMG2": "amzn-ami-graphics-hvm*x86_64-ebs*"
+          };
+          var aws = require("aws-sdk");
+          
+          exports.handler = function(event, context) {
+          
+              console.log("REQUEST RECEIVED:\n" + JSON.stringify(event));
+              
+              // For Delete requests, immediately send a SUCCESS response.
+              if (event.RequestType == "Delete") {
+                  sendResponse(event, context, "SUCCESS");
+                  return;
+              }
+          
+              var responseStatus = "FAILED";
+              var responseData = {};
+          
+              var ec2 = new aws.EC2({region: event.ResourceProperties.Region});
+              var describeImagesParams = {
+                  Filters: [{ Name: "name", Values: [archToAMINamePattern[event.ResourceProperties.Architecture]]}],
+                  Owners: [event.ResourceProperties.Architecture == "HVMG2" ? "679593333241" : "amazon"]
+              };
+          
+              // Get AMI IDs with the specified name pattern and owner
+              ec2.describeImages(describeImagesParams, function(err, describeImagesResult) {
+                  if (err) {
+                      responseData = {Error: "DescribeImages call failed"};
+                      console.log(responseData.Error + ":\n", err);
+                  }
+                  else {
+                      var images = describeImagesResult.Images;
+                      // Sort images by name in decscending order. The names contain the AMI version, formatted as YYYY.MM.Ver.
+                      images.sort(function(x, y) { return y.Name.localeCompare(x.Name); });
+                      for (var j = 0; j < images.length; j++) {
+                          if (isBeta(images[j].Name)) continue;
+                          responseStatus = "SUCCESS";
+                          responseData["Id"] = images[j].ImageId;
+                          break;
+                      }
+                  }
+                  sendResponse(event, context, responseStatus, responseData);
+              });
+          };
+
+          // Check if the image is a beta or rc image. The Lambda function won't return any of those images.
+          function isBeta(imageName) {
+              return imageName.toLowerCase().indexOf("beta") > -1 || imageName.toLowerCase().indexOf(".rc") > -1;
+          }
+
+
+          // Send response to the pre-signed S3 URL 
+          function sendResponse(event, context, responseStatus, responseData) {
+          
+              var responseBody = JSON.stringify({
+                  Status: responseStatus,
+                  Reason: "See the details in CloudWatch Log Stream: " + context.logStreamName,
+                  PhysicalResourceId: context.logStreamName,
+                  StackId: event.StackId,
+                  RequestId: event.RequestId,
+                  LogicalResourceId: event.LogicalResourceId,
+                  Data: responseData
+              });
+          
+              console.log("RESPONSE BODY:\n", responseBody);
+          
+              var https = require("https");
+              var url = require("url");
+          
+              var parsedUrl = url.parse(event.ResponseURL);
+              var options = {
+                  hostname: parsedUrl.hostname,
+                  port: 443,
+                  path: parsedUrl.path,
+                  method: "PUT",
+                  headers: {
+                      "content-type": "",
+                      "content-length": responseBody.length
+                  }
+              };
+          
+              console.log("SENDING RESPONSE...\n");
+          
+              var request = https.request(options, function(response) {
+                  console.log("STATUS: " + response.statusCode);
+                  console.log("HEADERS: " + JSON.stringify(response.headers));
+                  // Tell AWS Lambda that the function execution is done  
+                  context.done();
+              });
+          
+              request.on("error", function(error) {
+                  console.log("sendResponse Error:" + error);
+                  // Tell AWS Lambda that the function execution is done  
+                  context.done();
+              });
+            
+              // write data to request body
+              request.write(responseBody);
+              request.end();
+          }
+      Description: Invoke a function during stack creation.
+      Timeout: '30'
+
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeImages'
+                Resource: '*'
+
+  AMIInfo:
+    Type: 'Custom::AMIInfo'
+    Properties:
+      ServiceToken: !GetAtt 
+        - AMIInfoFunction
+        - Arn
+      Region: !Ref 'AWS::Region'
+      Architecture: !FindInMap 
+        - AWSInstanceType2Arch
+        - !Ref InstanceType
+        - Arch
+  
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access via port 22
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: '0.0.0.0/0'
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    DependsOn : 
+      - AMIInfo
+      - AMIInfoFunction
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !GetAtt 
+        - AMIInfo
+        - Id
+      SecurityGroups: [!Ref 'InstanceSecurityGroup']
 
 Outputs:
   PublicSubnet1CIDR:
